@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+    <http:listener-config name="accounts-sfdc-sys-api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="accounts-sfdc-sys-api-config" api="resource::e3613ad7-2818-4705-8a37-baa984b98955:accounts-sfdc-sys-api:1.0.1:raml:zip:accounts-sfdc-sys-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="d14dbbc6-1724-4924-84bd-6e38a2fc6b0c">
+        <salesforce:basic-connection username="gopi.a.chejerla@gmail.com" password="Mulesoft@123" securityToken="J8pKNdz2HXfNsMdsDtGL3kVG" />
+    </salesforce:sfdc-config>
+    <flow name="accounts-sfdc-sys-api-main">
+        <http:listener config-ref="accounts-sfdc-sys-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="accounts-sfdc-sys-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="accounts-sfdc-sys-api-console">
+        <http:listener config-ref="accounts-sfdc-sys-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="accounts-sfdc-sys-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform>
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="post:\accounts:application\json:accounts-sfdc-sys-api-config">
+        <ee:transform doc:name="Transform Message" doc:id="346809b9-5f00-4d0b-a543-82d81df9dcbb">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[{
+	Name: payload.name,
+	BillingStreet: payload.billingAddress.street,
+	BillingCity: payload.billingAddress.city,
+	BillingState: payload.billingAddress.state,
+	BillingPostalCode: payload.billingAddress.postalCode,
+	BillingCountry: payload.billingAddress.country,
+	ShippingStreet: payload.shippingAddress.street,
+	ShippingCity: payload.shippingAddress.city,
+	ShippingState: payload.shippingAddress.state,
+	ShippingPostalCode: payload.shippingAddress.postalCode,
+	ShippingCountry: payload.shippingAddress.country,
+	Phone: payload.phone,
+	Fax: payload.fax,
+	AccountNumber: payload.number,
+	Email__c: payload.email
+}
+]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <salesforce:create type="Account" doc:name="Create" doc:id="e821e61a-58b3-44d5-b6f7-ca17618c832e" config-ref="Salesforce_Config" />
+        <ee:transform doc:name="Transform Message" doc:id="aaf181eb-85da-4587-b59c-1759d62ba228">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <ee:transform doc:name="Transform Message" doc:id="86930355-51e1-4f36-a7a6-ff5f0b371be9">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "id": payload.items[0].id,
+    "status": if(payload.items[0].successful == true) 0 else 1,
+    "message": if(payload.items[0].successful == true) "Account Created successfuly" else "Failed to create account"
+    }]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="2b915796-ce1b-43fc-a007-44a3b0757b5c" message="#[payload]" />
+    </flow>
+	<flow name="get:\accounts\(accountId):accounts-sfdc-sys-api-config">
+        <ee:transform doc:id="da45fc2a-bdce-4a54-b923-53239d55dabc">
+            <ee:message />
+			<ee:variables>
+                <ee:set-variable variableName="accountId"><![CDATA[attributes.uriParams.'accountId']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<salesforce:query doc:name="Query" doc:id="1e30d64f-d526-4060-a34a-872e06abd8aa" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Name,Email__c,AccountNumber,Phone,Fax,BillingAddress,ShippingAddress FROM Account WHERE AccountNumber = ':accountNumber']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"accountNumber" : vars.accountId
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="d5ba51ad-49a9-461d-b45e-6f2d85aec884">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="e53a5834-9978-4719-aa73-7f1537e272a9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+---
+{
+  "name": payload[0].Name,
+  "email": payload[0].Email__c,
+  "number": payload[0].AccountNumber,
+  "phone": payload[0].Phone,
+  "fax": payload[0].Fax,
+  ("billingAddress": {
+    "street": payload[0].BillingAddress.street,
+    "city": payload[0].BillingAddress.city,
+    "state": payload[0].BillingAddress.state,
+    "postalCode": payload[0].BillingAddress.postalCode,
+    "country": payload[0].BillingAddress.country
+  }) if (sizeOf(payload[0].BillingAddress pluck $$) !=0 and sizeOf(payload[0].BillingAddress pluck $$) != null ),
+("shippingAddress": {
+      "street": payload[0].ShippingAddress.street,
+    "city": payload[0].ShippingAddress.city,
+    "state": payload[0].ShippingAddress.state,
+    "postalCode": payload[0].ShippingAddress.postalCode,
+    "country": payload[0].ShippingAddress.country
+
+  }) if (sizeOf(payload[0].ShippingAddress pluck $$) !=0 and sizeOf(payload[0].ShippingAddress pluck $$) != null )
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+</mule>
