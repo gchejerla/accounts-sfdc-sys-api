@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd">
+	
+	  <flow name="post:\accounts:application\json:accounts-sfdc-sys-api-config">
+        <set-variable value="#[payload.number]" doc:name="Set Variable" doc:id="eb3f55e7-d0d3-41c0-9e56-ed4684e2d50d" variableName="accountNumber"/>
+		<logger level="INFO" doc:name="Logger" doc:id="ae39a244-802f-4064-805e-b8eae8fbbcc9" message='#["Request Recived with Account Id " ++ vars.accountNumber ++ " to create account in Salesforce"]'/>
+		<ee:transform doc:name="Transform Message" doc:id="195ab192-7c6f-40be-9ce3-f1adf1176750">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+[{
+	Name: payload.name,
+	BillingStreet: payload.billingAddress.street,
+	BillingCity: payload.billingAddress.city,
+	BillingState: payload.billingAddress.state,
+	BillingPostalCode: payload.billingAddress.postalCode,
+	BillingCountry: payload.billingAddress.country,
+	ShippingStreet: payload.shippingAddress.street,
+	ShippingCity: payload.shippingAddress.city,
+	ShippingState: payload.shippingAddress.state,
+	ShippingPostalCode: payload.shippingAddress.postalCode,
+	ShippingCountry: payload.shippingAddress.country,
+	Phone: payload.phone,
+	Fax: payload.fax,
+	AccountNumber: payload.number,
+	Email__c: payload.email
+}
+]]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="7ae575dc-d327-42a2-b1a9-8f23d494f121" message='#["Before Creating Account in Salesforce with Account Number" ++ vars.accountNumber]'/>
+		<salesforce:create type="Account" doc:name="Create" doc:id="6d3dfe97-35a4-4e24-a542-c595cff2c1d0" config-ref="Salesforce_Config" />
+		<logger level="INFO" doc:name="Logger" doc:id="ab2b8734-38c1-4e67-94cf-36b28283d80e" message='#["After Creating Account in Salesforce with Account Number" ++ vars.accountNumber]'/>
+		<ee:transform doc:name="Transform Message" doc:id="2b999846-b5f7-4eae-98c2-1594063fc290">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="ad52ca3b-000a-4cf9-8ce4-9bc37e746350">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "id": payload.items[0].id,
+    "status": if(payload.items[0].successful == true) 0 else 1,
+    "message": if(payload.items[0].successful == true) "Account Created successfuly" else "Failed to create account"
+    }]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="bf26cab4-76a8-4940-99dd-20d63615d04b" message='#["Successfully created Account in Salesforce with Account Number" ++ vars.accountNumber]'/>
+    
+</flow>
+	<flow name="get:\accounts\(accountId):accounts-sfdc-sys-api-config">
+        <ee:transform doc:id="a60aa842-1461-461a-876b-7cf36158a9ad">
+            <ee:message />
+			<ee:variables>
+                <ee:set-variable variableName="accountId"><![CDATA[attributes.uriParams.'accountId']]></ee:set-variable>
+            </ee:variables>
+        </ee:transform>
+		<salesforce:query doc:name="Query" doc:id="fd543958-a882-48e8-8c1b-b2fded5e57d3" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[SELECT Name,Email__c,AccountNumber,Phone,Fax,BillingAddress,ShippingAddress FROM Account WHERE AccountNumber = ':accountNumber']]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"accountNumber" : vars.accountId
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="a1333bb3-10f2-4198-8643-e098686afe73">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="f1667c89-b0b6-447a-9bde-3fea63dcf3e7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json skipNullOn="everywhere"
+---
+{
+  "name": payload[0].Name,
+  "email": payload[0].Email__c,
+  "number": payload[0].AccountNumber,
+  "phone": payload[0].Phone,
+  "fax": payload[0].Fax,
+  ("billingAddress": {
+    "street": payload[0].BillingAddress.street,
+    "city": payload[0].BillingAddress.city,
+    "state": payload[0].BillingAddress.state,
+    "postalCode": payload[0].BillingAddress.postalCode,
+    "country": payload[0].BillingAddress.country
+  }) if (sizeOf(payload[0].BillingAddress pluck $$) !=0 and sizeOf(payload[0].BillingAddress pluck $$) != null ),
+("shippingAddress": {
+      "street": payload[0].ShippingAddress.street,
+    "city": payload[0].ShippingAddress.city,
+    "state": payload[0].ShippingAddress.state,
+    "postalCode": payload[0].ShippingAddress.postalCode,
+    "country": payload[0].ShippingAddress.country
+
+  }) if (sizeOf(payload[0].ShippingAddress pluck $$) !=0 and sizeOf(payload[0].ShippingAddress pluck $$) != null )
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+	
+	
+	</mule>

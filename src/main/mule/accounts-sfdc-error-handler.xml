@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<error-handler name="accounts-sfdc-error-handlerError_Handler" doc:id="12cf6692-7b2e-43ec-b3a3-71730090d679" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="3e2eaabd-839b-4614-87f9-907eb5aa0055" type="SALESFORCE:INVALID_INPUT">
+			<ee:transform doc:name="Transform Message" doc:id="4279ba12-ffd9-4aa5-a88d-77738abad0d8" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"statusCode": "500",
+	"Message": "Failed to create data in Salesforce because of invalid input",
+	"ErrorMessage": error.description
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="e2e863e5-9a9c-42fe-a657-78ac429df693" type="SALESFORCE:CONNECTIVITY">
+			<ee:transform doc:name="Transform Message" doc:id="7d231211-5892-4a92-875c-e25342672a38" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"statusCode": "500",
+	"Message": "Error while connecting to Salesforce, Please reach out to support team abc@company.com",
+	"ErrorMessage": error.description
+}]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="85bf2ae0-d5a1-4b6f-b5cd-60807926c238" type="APIKIT:BAD_REQUEST">
+			<ee:transform doc:name="Transform Message" doc:id="445fb9a2-d316-40ba-a518-3d8f38fffcd0" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"statusCode": "400",
+	"Message": "BAD INPUT REQUEST, Please send valid input data",
+	"ErrorMessage": error.description
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[400]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="7847c81f-17b4-44b9-bf6f-4782a270bb7e" type="APIKIT:METHOD_NOT_ALLOWED">
+			<ee:transform doc:name="Transform Message" doc:id="44d84836-9773-4588-a196-3846aaed713e" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"statusCode": "405",
+	"Message": "Method Not Allowed, Please send the request with valid method",
+	"ErrorMessage": error.description
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[405]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="1ac6eb2c-ecc8-4e40-838c-bb01a2f76dd3" type="ANY">
+			<ee:transform doc:name="Transform Message" doc:id="b1156feb-46cc-48de-858c-424d704ec57b" >
+				<ee:message >
+					<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"statusCode": "500",
+	"Message": "Internal Server Error, Please reach out to support team",
+	"ErrorMessage": error.description
+}]]></ee:set-payload>
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="httpStatus" ><![CDATA[500]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+		</on-error-propagate>
+	</error-handler>
+</mule>
